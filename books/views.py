@@ -1,53 +1,102 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
+from rest_framework.decorators import api_view
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework.response import Response
 from .models import Book
+import json
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='post',
+    operation_description="Create a new book",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING, description='Title of the book'),
+            'author': openapi.Schema(type=openapi.TYPE_STRING, description='Author of the book'),
+            'published_date': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Publication date (YYYY-MM-DD)'),
+        },
+        required=['title', 'author'],
+    ),
+    responses={
+        201: openapi.Response('Book created successfully!'),
+        400: openapi.Response('Invalid input'),
+    },
+)
+@api_view(['POST'])
 def create_book(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            title = data.get('title')
-            author = data.get('author')
-            published_date = data.get('published_date', None)
+    try:
+        data = request.data  # DRF automatically parses the body for us
+        title = data.get('title')
+        author = data.get('author')
+        published_date = data.get('published_date', None)
 
-            if not title or not author:
-                return JsonResponse({'error': 'Title and author are required.'}, status=400)
+        if not title or not author:
+            return Response({'error': 'Title and author are required.'}, status=400)
 
-            book = Book.objects.create(
-                title=title,
-                author=author,
-                published_date=published_date
-            )
-            return JsonResponse({'message': 'Book created successfully!', 'book_id': book.id}, status=201)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON payload.'}, status=400)
-    return JsonResponse({'error': 'Invalid HTTP method.'}, status=405)
+        book = Book.objects.create(
+            title=title,
+            author=author,
+            published_date=published_date
+        )
+        return Response({'message': 'Book created successfully!', 'book_id': book.id}, status=201)
+    except json.JSONDecodeError:
+        return Response({'error': 'Invalid JSON payload.'}, status=400)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Delete a book by ID",
+    responses={
+        200: openapi.Response('Book deleted successfully!'),
+        404: openapi.Response('Book not found'),
+    },
+)
+@api_view(['DELETE'])
 def delete_book(request, book_id):
-    if request.method == 'DELETE':
-        try:
-            book = Book.objects.get(id=book_id)
-            book.delete()
-            return JsonResponse({'message': 'Book deleted successfully!'}, status=200)
-        except Book.DoesNotExist:
-            return JsonResponse({'error': 'Book not found.'}, status=404)
-    return JsonResponse({'error': 'Invalid HTTP method.'}, status=405)
+    try:
+        book = Book.objects.get(id=book_id)
+        book.delete()
+        return Response({'message': 'Book deleted successfully!'}, status=200)
+    except Book.DoesNotExist:
+        return Response({'error': 'Book not found.'}, status=404)
 
-
-def get_all_books(request):
-    if request.method == 'GET':
-        books = Book.objects.all()
-        books_data = [
-            {
-                'id': book.id,
-                'title': book.title,
-                'author': book.author,
-                'published_date': book.published_date.strftime('%Y-%m-%d') if book.published_date else None
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get all books",
+    responses={
+        200: openapi.Response(
+            description="List of books",
+            examples={
+                'application/json': {
+                    'books': [
+                        {
+                            'id': 1,
+                            'title': 'The Great Gatsby',
+                            'author': 'F. Scott Fitzgerald',
+                            'published_date': '1925-04-10'
+                        },
+                        {
+                            'id': 2,
+                            'title': 'To Kill a Mockingbird',
+                            'author': 'Harper Lee',
+                            'published_date': '1960-07-11'
+                        }
+                    ]
+                }
             }
-            for book in books
-        ]
-        return JsonResponse({'books': books_data}, status=200)
-    return JsonResponse({'error': 'Invalid HTTP method.'}, status=405)
+        ),
+        400: openapi.Response('Invalid request'),
+    },
+)
+@api_view(['GET'])
+def get_all_books(request):
+    books = Book.objects.all()
+    books_data = [
+        {
+            'id': book.id,
+            'title': book.title,
+            'author': book.author,
+            'published_date': book.published_date.strftime('%Y-%m-%d') if book.published_date else None
+        }
+        for book in books
+    ]
+    return Response({'books': books_data}, status=200)
