@@ -5,6 +5,9 @@ from rest_framework.response import Response
 from .models import Book
 import json
 
+# Tag for the 'Books' section in Swagger
+BOOKS_TAG = ['Books']
+
 @swagger_auto_schema(
     method='post',
     operation_description="Create a new book",
@@ -21,6 +24,7 @@ import json
         201: openapi.Response('Book created successfully!'),
         400: openapi.Response('Invalid input'),
     },
+    tags=BOOKS_TAG  # Adding the 'Books' tag
 )
 @api_view(['POST'])
 def create_book(request):
@@ -49,6 +53,7 @@ def create_book(request):
         200: openapi.Response('Book deleted successfully!'),
         404: openapi.Response('Book not found'),
     },
+    tags=BOOKS_TAG  # Adding the 'Books' tag
 )
 @api_view(['DELETE'])
 def delete_book(request, book_id):
@@ -86,6 +91,7 @@ def delete_book(request, book_id):
         ),
         400: openapi.Response('Invalid request'),
     },
+    tags=BOOKS_TAG  # Adding the 'Books' tag
 )
 @api_view(['GET'])
 def get_all_books(request):
